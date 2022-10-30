@@ -11,9 +11,8 @@ using namespace std;
 class ClaseVectorHilo
 {
 public:
-    int numPosiciones; // Variable que define la cantidad de hilos del vector
     int dHilo, rHilo;  // Variables que definen la demora y repeticion de un hilo
-    string sHilo; // Variable que almacena la primera parte del nombre del hilo
+    string sHilo; // Variable que almacena el saludo del hilo
     thread P[100];
 
     ClaseVectorHilo(int pos)
