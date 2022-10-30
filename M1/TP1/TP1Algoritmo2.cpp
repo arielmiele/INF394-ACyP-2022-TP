@@ -5,20 +5,23 @@
 
 using namespace std;
 
-void misaludo (string m, int demora, int veces) {
-    for (int i=1; i <= veces; i++) {
-        cout << m+"\n";
+void misaludo(string m, int demora, int veces)
+{
+    for (int i = 1; i <= veces; i++)
+    {
+        cout << m + "\n";
         this_thread::sleep_for(chrono::milliseconds(demora));
     }
 }
 
-int main () {
+int main()
+{
     thread P[3];
     // Se modifica la llamada a la función "misaludo"
     // Originalmente se encontraba codificada como "saludo"
-    P[0]=thread(&misaludo, "Soy 1 ", 100, 10),
-    P[1]=thread(&misaludo, "\tSoy 2", 150, 15),
-    P[2]=thread(&misaludo, "\t\tSoy 3", 300, 5);
+    P[0] = thread(&misaludo, "Soy 1 ", 100, 10),
+    P[1] = thread(&misaludo, "\tSoy 2", 150, 15),
+    P[2] = thread(&misaludo, "\t\tSoy 3", 300, 5);
 
     P[0].join();
     P[1].join();
@@ -26,4 +29,3 @@ int main () {
 
     cout << "Fin \n";
 }
-
