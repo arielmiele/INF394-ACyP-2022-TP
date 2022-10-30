@@ -14,6 +14,8 @@ void misaludo (string m, int demora, int veces) {
 
 int main () {
     thread P[3];
+    // Se modifica la llamada a la función "misaludo"
+    // Originalmente se encontraba codificada como "saludo"
     P[0]=thread(&misaludo, "Soy 1 ", 100, 10),
     P[1]=thread(&misaludo, "\tSoy 2", 150, 15),
     P[2]=thread(&misaludo, "\t\tSoy 3", 300, 5);
