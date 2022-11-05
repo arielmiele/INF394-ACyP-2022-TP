@@ -26,9 +26,23 @@ Cuando los hilos finalicen su ejecución, el padre debe mostrar por pantalla “
 int main(void)
 {
     // getpid() devuelve el identificador del proceso. Podríamos usar getppid() para devolver el identificador del proceso padre.
-    printf("Soy un proceso, mi identificador de proceso es: %d\n", getpid());
 
-    fork(); // Se crea el proceso hijo del proceso principal
+    // Creamos el proceso hijo del proceso principal; almacenamos el identificador del proceso en una variable int
+
+    int pid = fork();
+
+    // Aquí se ejecutarán instrucciones tanto del padre (pid != 0) como del hijo (pid == 0)
+
+    if (pid != 0)
+    {
+        // Estas instrucciones las ejecutará sólo el proceso padre
+        printf("Soy el proceso padre, mi id es: %d\n", getpid());
+    }
+    else
+    {
+        // Estas instrucciones las ejecutará sólo el proceso hijo
+        printf("Soy el proceso hijo, mi id es: %d\n", getpid());
+    }
 
     return 0;
 }
