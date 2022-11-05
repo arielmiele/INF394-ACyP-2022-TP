@@ -30,6 +30,5 @@ int main(void)
 
     fork(); // Se crea el proceso hijo del proceso principal
 
-    printf("Proceso padre: %d\nProceso hijo: %d\n\n", getppid(), getpid());
     return 0;
 }
