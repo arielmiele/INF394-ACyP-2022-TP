@@ -20,29 +20,103 @@ Cuando los hilos finalicen su ejecución, el padre debe mostrar por pantalla “
 */
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <unistd.h>
 #include <sys/types.h>
+#include <time.h>
+#include <pthread.h>
+#include <string.h>
 
-int main(void)
+// Se define la variable global compartida, inicializada en 0
+int compartida = 0;
+
+// Tarea que realizará el Hilo de Tipo 1
+void *tareaHiloN(int instancia)
 {
-    // getpid() devuelve el identificador del proceso. Podríamos usar getppid() para devolver el identificador del proceso padre.
+    // Se muestra por pantalla la isntancia del hilo y su ID
+    printf("Instancia %d del hilo de Tipo 1.\n", instancia);
+    // Se suspende por un tiempo aleatorio entre 0 y 2 segundos el hilo
 
-    // Creamos el proceso hijo del proceso principal; almacenamos el identificador del proceso en una variable int
+    sleep(demoraAleatoria());
+    // Se incrementa en 1 la variable global "compartida"
+    compartida++;
+}
 
-    int pid = fork();
+// Tarea que realizará el Hilo del Tipo 2
+void *tareaHiloM(int instancia)
+{
+    // Se muestra por pantalla la isntancia del hilo y su ID
+    printf("Instancia %d del hilo de Tipo 2.\n", instancia);
+    // Se suspende por un tiempo aleatorio entre 0 y 2 segundos el hilo
+    sleep(demoraAleatoria());
+    // Se muestra por pantalla la veriable gobal "compartida"
+    printf("Valor de la variable global 'compartida': %d\n", compartida);
+}
 
-    // Aquí se ejecutarán instrucciones tanto del padre (pid != 0) como del hijo (pid == 0)
+int demoraAleatoria()
+{
+    // La demora aleatoria se definirá entre 0 y 2 segundos
 
-    if (pid != 0)
+    // Se define la variable para almacenar la demora aleatoria, una variable para el valor mínimo y una para el valor máximo
+    int dAleatoria, minD = 0, maxD = 2;
+
+    // Retorna el número de demora aleatoria
+    return dAleatoria = minD + rand() % (maxD - minD + 1);
+}
+
+int main(int argc, char const *argv[])
+{
+    // Se inicia la semilla para la generación de números aleatorios
+    srand(time(0));
+
+    // Se crean las variables a utilizar para la llamada de la función
+    int N, M;
+
+    // Se solicita al usuario ingresar los números de hilos a crear
+    printf("Seleccione la cantidad de hilos de Tipo 1 a crear (N): ");
+    // Se almacena el numero en la variable N
+    scanf("%d", &N);
+
+    // Hacemos lo mismo para la variable M
+    printf("Seleccione la cantidad de hilos de Tipo 2 a crear (M): ");
+    scanf("%d", &M);
+
+    printf("\nSe crean %d hilos del Tipo 1 y %d hilos del Tipo 2.\n\n", N, M);
+
+    // Se crea el arreglo de hilos N
+    pthread_t thN[N];
+
+    // Se crea el arreglo de hilos M
+    pthread_t thM[M];
+
+    // Creación de los hilos N de Tipo 1
+    for (int i = 0; i < N; i++)
     {
-        // Estas instrucciones las ejecutará sólo el proceso padre
-        printf("Soy el proceso padre, mi id es: %d\n", getpid());
+        // Se crea el hilo dentro de su posición en el arreglo de hilos, se le asigna la tarea a realizar, pasándole el valor i como identificador de la instancia
+        pthread_create(&thN[i], NULL, &tareaHiloN, i);
     }
-    else
+
+    // Join de los hilos N de Tipo 1
+    for (int i = 0; i < N; i++)
     {
-        // Estas instrucciones las ejecutará sólo el proceso hijo
-        printf("Soy el proceso hijo, mi id es: %d\n", getpid());
+        pthread_join(thN[i], NULL);
     }
+
+    // Creación de los hilos M de Tipo 2
+    for (int i = 0; i < M; i++)
+    {
+        // Se crea el hilo dentro de su posición en el arreglo de hilos, se le asigna la tarea a realizar, pasándole el valor i como identificador de la instancia
+        pthread_create(&thM[i], NULL, &tareaHiloM, i);
+    }
+
+    // Join de los hilos M de Tipo 2
+    for (int i = 0; i < M; i++)
+    {
+        pthread_join(thM[i], NULL);
+    }
+
+    // Se indica al usuario que la ejecución a finalizado
+    printf("La ejecucion ha finalizado.\n");
 
     return 0;
 }
