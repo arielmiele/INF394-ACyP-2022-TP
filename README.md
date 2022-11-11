@@ -17,9 +17,13 @@ En concreto los objetivos de esta práctica son:
 
 ### Objetivo TP2
 
+El objetivo principal de esta actividad consiste en que el estudiante identifique los posibles usos de los threads para el paralelismo y la concurrencia, y las herramientas que brindan soporte a la sincronización y comunicación.
+
 ## TP3
 
 ### Objetivo TP3
+
+El objetivo principal de esta actividad consiste en que el estudiante trabaje en posibles soluciones e implemente una solución a la problemática planteada, en la cual pondrá en juego las competencias de la materia. Puntualmente, trabajará con concurrencia y paralelismo, en memoria compartida y distribuida mediante procesos, subprocesos, hilos pipes y sockets.
 
 ## TP 4
 
