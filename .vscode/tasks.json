@@ -1,35 +1,25 @@
 {
-    "version": "2.0.0",
-    "tasks": [
-        {
-            "type": "Live Preview",
-            "workspacePath": "c:\\Users\\miele\\OneDrive\\Universidad Siglo 21\\2022\\2022 - 2B\\INF394 - Algoritmos Concurrentes y Paralelos\\TP\\INF394-ACyP-2022-TP",
-            "problemMatcher": [],
-            "label": "Live Preview: Ejecutar servidor",
-            "group": "build"
-        },
-        {
-            "type": "cppbuild",
-            "label": "C/C++: cl.exe compilar archivo activo",
-            "command": "cl.exe",
-            "args": [
-                "/Zi",
-                "/EHsc",
-                "/nologo",
-                "/Fe${fileDirname}\\${fileBasenameNoExtension}.exe",
-                "${file}"
-            ],
-            "options": {
-                "cwd": "${fileDirname}"
-            },
-            "problemMatcher": [
-                "$msCompile"
-            ],
-            "group": {
-                "kind": "build",
-                "isDefault": true
-            },
-            "detail": "Tarea generada por el depurador."
-        }
-    ]
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"type": "cppbuild",
+			"label": "C/C++: gcc.exe compilar archivo activo",
+			"command": "C:\\msys64\\mingw64\\bin\\gcc.exe",
+			"args": [
+				"-fdiagnostics-color=always",
+				"-g",
+				"${file}",
+				"-o",
+				"${fileDirname}\\${fileBasenameNoExtension}.exe"
+			],
+			"options": {
+				"cwd": "${fileDirname}"
+			},
+			"problemMatcher": [
+				"$gcc"
+			],
+			"group": "build",
+			"detail": "compilador: C:\\msys64\\mingw64\\bin\\gcc.exe"
+		}
+	]
 }
