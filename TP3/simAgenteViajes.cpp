@@ -84,7 +84,7 @@ int main()
             if (seats_left < PARENT_CONTROL)
             {
                 loop = false;
-                cout << "Salida del lopp del Padre. PID: " << getpid() << endl;
+                cout << "Salida del loop del Padre. PID: " << getpid() << endl;
             }
         }
 
