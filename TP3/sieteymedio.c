@@ -116,7 +116,7 @@ int main(int argc, char const *argv[])
                 printf("El numero de jugadores no es correcto.\n");
             }
         }
-        iniciar_juego(numero_jugadores); // Inicia el juego
+        iniciar_juego(numero_jugadores, mazo); // Inicia el juego
 
         // Fin del juego
         printf("\n¡ FIN DEL JUEGO !\nEsperamos que se hayan divertido.\n");
@@ -310,10 +310,22 @@ void iniciar_juego(int N, float mazo[4][10])
     // Ciclo para la creación de hijos
     int repartidor_a_jugador[2]; // FD del primer pipe
     int jugador_a_repartidor[2]; // FD del segundo pipe
-    pipe(repartidor_a_jugador);  // Primer pipe - enviará la carta al jugador y aguardará una nueva decisión
-    pipe(jugador_a_repartidor);  // Segundo pipe - enviará la decisión al repartidor dependiendo de su decisión
 
-    int CONTROL_PADRE = (2 - N); // Constante para el control
+    // Primer pipe - enviará la carta al jugador y aguardará una nueva decisión
+    if (pipe(repartidor_a_jugador) == -1)
+    {
+        printf("\nError en la creación del pipe(repartidor_a_jugador).\n");
+        return 1;
+    };
+
+    // Segundo pipe - enviará la decisión al repartidor dependiendo de su decisión
+    if (pipe(jugador_a_repartidor) == -1)
+    {
+        printf("\nError en la creación del pipe(repartidor_a_jugador).\n");
+        return 1;
+    };
+
+    // int CONTROL_PADRE = (2 - N); // Constante para el control
 
     int tamanio_mazo_actual = tamanio_mazo(mazo); // Cartas que quedan en el mazo
 
@@ -354,16 +366,17 @@ void iniciar_juego(int N, float mazo[4][10])
     {
         bool loop = true;
         float carta_a_jugador = 0.0; // Almacena la carta que se da al jugador
+        float puntaje_jugador = 0.0; // Almacena el puntaje del jugador
         while (loop)
         {
-
             // Si quedan cartas disponibles
             if (tamanio_mazo_actual > 0 && decision_jugador == 1)
             {
-                printf("Cartas disponibles en la baraja: %d\n", tamanio_mazo_actual);
-                carta_a_jugador = saca_carta(mazo);                              // Saca una carta del mazo de forma aleatoria
-                write(repartidor_a_jugador[1], &carta_a_jugador, SIZE_OF_FLOAT); // Envía la carta al jugador
-                read(jugador_a_repartidor[0], &decision_jugador, SIZE_OF_INT);   // Lee la decisión del jugador
+                printf("Cartas disponibles en la baraja: %d\n", tamanio_mazo_actual); // Muestra el tamaño actual de la baraja
+                carta_a_jugador = saca_carta(mazo);                                   // Saca una carta del mazo de forma aleatoria
+                puntaje_jugador += carta_a_jugador;                                   // Suma el puntaje de la carta obtenida al puntaje del jugador
+                write(repartidor_a_jugador[1], &carta_a_jugador, SIZE_OF_FLOAT);      // Envía la carta al jugador
+                read(jugador_a_repartidor[0], &decision_jugador, SIZE_OF_INT);        // Lee la decisión del jugador
                 // wait();                                                          // Espera a que finalice uno de los jugadores
             }
             else if (tamanio_mazo <= 0)
