@@ -54,6 +54,12 @@ void incializar_mazo(float mazo[4][10]);
  */
 int imprimir_menu_principal();
 
+/**
+ * Imprime el menú del jugador
+ * @return devuelve como entero la opción elegida por el jugador para poder continuar
+ */
+int imprimir_menu_jugador(int cartas_disponibles);
+
 // Inicia el juego (N = cantidad de jugadores)
 void iniciar_juego(int N, float mazo[4][10]);
 
@@ -99,7 +105,8 @@ int main(int argc, char const *argv[])
     printf("¡ Bienvenido a 7 y medio !\nEsperamos que se divierta.\n");
 
     // Imprimir menú principal
-    opcion_menu_p = imprimir_menu_principal;
+    opcion_menu_p = imprimir_menu_principal();
+    system("clear");
 
     // Define el accionar dependiendo de la decisión obtenida desde el menú
     if (opcion_menu_p == 1)
@@ -107,19 +114,22 @@ int main(int argc, char const *argv[])
         // Preparación para el inicio del juego
         float mazo[4][10];     // Definición del mazo
         incializar_mazo(mazo); // Inicialización del mazo
-        while (numero_jugadores < 2 && numero_jugadores > 8)
+        while ((numero_jugadores < 2) || (numero_jugadores > 8))
         {
-            printf("Ingrese numero de jugadores (2 a 8): ");  // Solicita ingreso de número de jugadores
-            scanf("%d", numero_jugadores);                    // Almacena el número de jugadores
-            if (numero_jugadores < 2 || numero_jugadores > 8) // Controla que el número de jugadores sea de 2 a 8
+            printf("\nIngrese numero de jugadores (2 a 8): "); // Solicita ingreso de número de jugadores
+            scanf("%d", &numero_jugadores);                    // Almacena el número de jugadores
+            if (numero_jugadores < 2 || numero_jugadores > 8)  // Controla que el número de jugadores sea de 2 a 8
             {
-                printf("El numero de jugadores no es correcto.\n");
+                printf("\nEl numero de jugadores no es correcto.\n");
             }
         }
         iniciar_juego(numero_jugadores, mazo); // Inicia el juego
+        while(wait(NULL) != -1 || errno != ECHILD){
+
+        }
 
         // Fin del juego
-        printf("\n¡ FIN DEL JUEGO !\nEsperamos que se hayan divertido.\n");
+        printf("\n¡ FIN DEL JUEGO !\nEsperamos que se hayan divertido.\n\n");
         return 0;
     }
     else if (opcion_menu_p == 2)
@@ -275,14 +285,17 @@ float saca_carta(float mazo[4][10])
  */
 int imprimir_menu_principal()
 {
-    int eleccion = 0; // Declaración de la variable que almacena la decisión tomada
+    int eleccion;
+    bool loop = true;
 
-    // Controla que la decisión pertenezca a las disponibles para elegir
-    while (eleccion != 1 || eleccion != 2)
+    while (loop)
     {
         printf("Menú principal\n1 - Iniciar Juego\n2 - Salir\n\nElegir Opción: "); // Mensaje para el operador (menu)
-        scanf("%d", eleccion);                                                     // Almacena la decisión en la variable "eleccion"
+        scanf("%d", &eleccion);
+        if (eleccion == 1 || eleccion == 2)
+            loop = false;
     }
+
     return eleccion; // Devuelve la variable
 }
 
@@ -294,10 +307,10 @@ int imprimir_menu_principal()
 int imprimir_menu_jugador(int cartas_disponibles)
 {
     int opcion;                                                    // Declaración de la variable que almacena la decisión tomada
-    printf("Quedan %d cartas disponibles.\n", cartas_disponibles); // Muestra la cantidad de cartas disponibles
+    printf("\nQuedan %d cartas disponibles.\n\n", cartas_disponibles); // Muestra la cantidad de cartas disponibles
     printf("Menu del Jugador:\n1 - Tomar carta\n2 - Plantarse\nElegir Opción: ");
-    scanf("%d", opcion); // Almacena la decisión del jugador
-    return opcion;       // Devuelve la opción seleccionada
+    scanf("%d", &opcion); // Almacena la decisión del jugador
+    return opcion;        // Devuelve la opción seleccionada
 }
 
 /**
@@ -315,14 +328,14 @@ void iniciar_juego(int N, float mazo[4][10])
     if (pipe(repartidor_a_jugador) == -1)
     {
         printf("\nError en la creación del pipe(repartidor_a_jugador).\n");
-        return 1;
+        return;
     };
 
     // Segundo pipe - enviará la decisión al repartidor dependiendo de su decisión
     if (pipe(jugador_a_repartidor) == -1)
     {
         printf("\nError en la creación del pipe(repartidor_a_jugador).\n");
-        return 1;
+        return;
     };
 
     // int CONTROL_PADRE = (2 - N); // Constante para el control
@@ -331,7 +344,7 @@ void iniciar_juego(int N, float mazo[4][10])
 
     int decision_jugador = 1; // Decisión del jugador (1 = Nueva carta; 2 = Se planta)
 
-    pid_t shut_down[40]; // Definición del arreglo para controlar la finalización de los procesos hijos
+    pid_t shut_down[7]; // Definición del arreglo para controlar la finalización de los procesos hijos
 
     int pid; // Seeguimiento de procesos PADRE / HIJOS
 
@@ -343,7 +356,7 @@ void iniciar_juego(int N, float mazo[4][10])
         if (pid < 0)
         {
             printf("¡ERROR! El proceso hijo %d ha fallado", i);
-            return -1;
+            return;
         }
 
         // Si el PID es 0, es el proceso hijo, equivalente a un jugador
@@ -379,7 +392,7 @@ void iniciar_juego(int N, float mazo[4][10])
                 read(jugador_a_repartidor[0], &decision_jugador, SIZE_OF_INT);        // Lee la decisión del jugador
                 // wait();                                                          // Espera a que finalice uno de los jugadores
             }
-            else if (tamanio_mazo <= 0)
+            else if (tamanio_mazo(mazo) <= 0)
             {
                 printf("No hay cartas disponibles.\n");
                 loop = false;
@@ -402,7 +415,7 @@ void iniciar_juego(int N, float mazo[4][10])
         {
             printf("Esperando a que el Jugador %d (PID: %d) salga del juego.\n", i, getpid());
             waitpid(shut_down[i], NULL, 0);
-            printf("El jugador %d (PID: %d) ha salido del juego.\n", i, getpid());
+            printf("El jugador %d ha salido del juego.\n", i);
         }
 
         // Comprobación de que todos los jugadores han terminado de jugar
@@ -435,8 +448,8 @@ void control_jugador(int *repartidor_a_jugador, int *jugador_a_repartidor, int i
         // Si quedan cartas disponibles, escribir la disponibilidad y luego tomar una
         if (cartas_disponibles > 0)
         {
-            opcion_elegida = imprimir_menu_jugador; // Muestra el menu al jugador para que tome la decisión
-            if (opcion_elegida == 1)                // Retirar una carta
+            opcion_elegida = imprimir_menu_jugador(cartas_disponibles); // Muestra el menu al jugador para que tome la decisión
+            if (opcion_elegida == 1)                                    // Retirar una carta
             {
                 cartas_disponibles--; // Disminuye en 1 la cantidad de cartas disponibles
             }
