@@ -124,9 +124,9 @@ int main(int argc, char const *argv[])
             }
         }
         iniciar_juego(numero_jugadores, mazo); // Inicia el juego
-        while(wait(NULL) != -1 || errno != ECHILD){
-
-        }
+        // while (wait(NULL) != -1 || errno != ECHILD)
+        // {
+        // }
 
         // Fin del juego
         printf("\n¡ FIN DEL JUEGO !\nEsperamos que se hayan divertido.\n\n");
@@ -239,16 +239,16 @@ float saca_carta(float mazo[4][10])
 {
     // Inicializa variables
     float carta = 0.0;                    // Almacena el valor de la carta extraida
-    int palo_aleatorio = rand() % 5;      // Calcula el palo de la carta (de 1 a 4), asociado a las filas de la matriz MAZO
-    int posicion_aleatoria = rand() % 11; // Calcula la carta de forma aleatoria (de 1 a 10), asociado a las columnas de la matriz MAZO
+    int palo_aleatorio = rand() % 4;      // Calcula el palo de la carta (de 1 a 4), asociado a las filas de la matriz MAZO
+    int posicion_aleatoria = rand() % 10; // Calcula la carta de forma aleatoria (de 1 a 10), asociado a las columnas de la matriz MAZO
     char palo[10];                        // Almacena el dato del palo para mostrar por pantalla
 
     // Extrae una carta del mazo hasta encontrar una carta disponible (distinto de 0.0)
     while (mazo[palo_aleatorio][posicion_aleatoria] == 0.0)
     {
         // Vuelve a calcular la posición para la extracción
-        int palo_aleatorio = rand() % 5;
-        int posicion_aleatoria = rand() % 11;
+        int palo_aleatorio = rand() % 4;
+        int posicion_aleatoria = rand() % 10;
     }
 
     carta = mazo[palo_aleatorio][posicion_aleatoria]; // Se almacena el valor de la posición en el array "carta"
@@ -275,7 +275,10 @@ float saca_carta(float mazo[4][10])
     }
 
     printf("\nCarta Extraída:\nPalo: %s - Carta: %d - Valor: %.1f\n\n", palo, posicion_aleatoria, carta); // Muestra la carta elegida
-    return carta;                                                                                         // Devuelve el valor de la carta
+    printf("Estado del mazo: \n");
+    imprimir_mazo(mazo); // Imprime el mazo
+    printf("\n\n");
+    return carta; // Devuelve el valor de la carta
 }
 
 /**
@@ -297,20 +300,6 @@ int imprimir_menu_principal()
     }
 
     return eleccion; // Devuelve la variable
-}
-
-/**
- * Imprime el menu para que el jugador tome la decisión
- * Permite al usuario (jugador) seleccionar una opción
- * @return devuelve como entero (int) la opción seleccionada
- */
-int imprimir_menu_jugador(int cartas_disponibles)
-{
-    int opcion;                                                    // Declaración de la variable que almacena la decisión tomada
-    printf("\nQuedan %d cartas disponibles.\n\n", cartas_disponibles); // Muestra la cantidad de cartas disponibles
-    printf("Menu del Jugador:\n1 - Tomar carta\n2 - Plantarse\nElegir Opción: ");
-    scanf("%d", &opcion); // Almacena la decisión del jugador
-    return opcion;        // Devuelve la opción seleccionada
 }
 
 /**
@@ -342,8 +331,6 @@ void iniciar_juego(int N, float mazo[4][10])
 
     int tamanio_mazo_actual = tamanio_mazo(mazo); // Cartas que quedan en el mazo
 
-    int decision_jugador = 1; // Decisión del jugador (1 = Nueva carta; 2 = Se planta)
-
     pid_t shut_down[7]; // Definición del arreglo para controlar la finalización de los procesos hijos
 
     int pid; // Seeguimiento de procesos PADRE / HIJOS
@@ -362,10 +349,72 @@ void iniciar_juego(int N, float mazo[4][10])
         // Si el PID es 0, es el proceso hijo, equivalente a un jugador
         if (pid == 0)
         {
+            close(repartidor_a_jugador[1]);
             // Salida que muestra cuando un jugador comienza a jugar
             printf("El Jugador %d (PID: %d) ha entrado al juego!\n", i, getpid());
             // Se inicia la función de juego
-            control_jugador(repartidor_a_jugador, jugador_a_repartidor, i);
+            // control_jugador(repartidor_a_jugador, jugador_a_repartidor, i);
+
+            // Programa que controla al jugador
+            int opcion_elegida;    // Almacena opción del menú de jugador (1 = Nueva Carta, 2 = Se Planta)
+            float puntaje_jugador; // Inicializa el puntaje del jugador
+            float carta_dada;      // Inicializa el valor de la carta otorgada al jugador
+
+            // El jugador lee su puntaje
+            if (read(repartidor_a_jugador[0], &puntaje_jugador, SIZE_OF_FLOAT) < 0)
+            {
+                printf("ERROR. No se pudo leer del Pipe en proceso ID %d.\n", getpid());
+                return;
+            }
+
+            printf("\nSoy el jugador %d (ID: %d), mi puntaje actual es: %.2f", N, getpid(), puntaje_jugador); // Muestra al jugador participando en el juego
+
+            // El jugador lee la carta otorgada
+            if (read(repartidor_a_jugador[0], &carta_dada, SIZE_OF_FLOAT) < 0)
+            {
+                printf("ERROR. No se pudo leer del Pipe en proceso ID %d.\n", getpid());
+                return;
+            }
+
+            printf("\nSoy el jugador %d (ID: %d), me dieron una carta con puntaje %.2f.\n", N, getpid(), carta_dada); // Muestra la carta dada al jugador
+
+            // Suma a su mano la carta
+            puntaje_jugador += carta_dada;
+
+            // El jugador muestra su puntaje por pantalla
+            printf("\nSoy el jugador %d (ID: %d), mi puntaje actual es: %.2f", N, getpid(), puntaje_jugador); // Muestra al jugador participando en el juego
+
+            // Decide, acorde a su puntaje, si intenta sacar una carta más o no
+            if (puntaje_jugador >= 7.5)
+            {
+                printf("\nSoy el jugador %d (ID: %d), acá me planto!\n", N, getpid()); // Muestra al jugador plantandose
+                opcion_elegida = 2;                                                    // Decide no sacar más cartas = SE PLANTA
+                write(jugador_a_repartidor[1], &opcion_elegida, SIZE_OF_INT);          // Escribe al repartidor con la opción elegida
+                write(jugador_a_repartidor[1], &puntaje_jugador, SIZE_OF_FLOAT);       // Escribe el puntaje del jugador al repartidor
+                close(jugador_a_repartidor[0]);                                        // Cierra la lectura
+                close(jugador_a_repartidor[1]);                                        // Cierra la escritura
+            }
+            else if (puntaje_jugador < 7.5)
+            {
+                opcion_elegida = rand() % 2 + 1; // Decide si saca o no, aleatoriamente
+                if (opcion_elegida == 2)
+                {
+                    printf("\nSoy el jugador %d (ID: %d), acá me planto!\n", N, getpid()); // Muestra al jugador plantandose
+                    write(jugador_a_repartidor[1], &opcion_elegida, SIZE_OF_INT);          // Escribe al repartidor con la opción elegida
+                    write(jugador_a_repartidor[1], &puntaje_jugador, SIZE_OF_FLOAT);       // Escribe el puntaje del jugador al repartidor
+                    close(jugador_a_repartidor[0]);                                        // Cierra la lectura
+                    close(jugador_a_repartidor[1]);                                        // Cierra la escritura
+                }
+                else
+                {
+                    printf("\nSoy el jugador %d (ID: %d), pido una nueva carta, por favor. \n", N, getpid()); // Muestra al jugador pidiendo carta
+                    write(jugador_a_repartidor[1], &opcion_elegida, SIZE_OF_INT);                             // Escribe al repartidor con la opcion elegida
+                    write(jugador_a_repartidor[1], &puntaje_jugador, SIZE_OF_FLOAT);                          // Escribe el puntaje del jugador al repartidor
+                    close(jugador_a_repartidor[0]);                                                           // Cierra la lectura
+                }
+            }
+            close(jugador_a_repartidor[1]); // Cierra la escritura
+
             break; // Se frena la creación de hijos
         }
         else
@@ -377,29 +426,44 @@ void iniciar_juego(int N, float mazo[4][10])
     // Si el pid es mayor a 0, se ejecuta el proceso padre
     if (pid > 0)
     {
+        close(jugador_a_repartidor[1]);
         bool loop = true;
         float carta_a_jugador = 0.0; // Almacena la carta que se da al jugador
         float puntaje_jugador = 0.0; // Almacena el puntaje del jugador
+        int decision_jugador = 1;    // Decisión del jugador (1 = Nueva carta; 2 = Se planta)
+
         while (loop)
         {
             // Si quedan cartas disponibles
             if (tamanio_mazo_actual > 0 && decision_jugador == 1)
             {
+                printf("Soy el repartidor (ID: %d).\n", getpid());
                 printf("Cartas disponibles en la baraja: %d\n", tamanio_mazo_actual); // Muestra el tamaño actual de la baraja
                 carta_a_jugador = saca_carta(mazo);                                   // Saca una carta del mazo de forma aleatoria
+                tamanio_mazo_actual--;                                                // Disminuye en 1 el tamaño del mazo
                 puntaje_jugador += carta_a_jugador;                                   // Suma el puntaje de la carta obtenida al puntaje del jugador
                 write(repartidor_a_jugador[1], &carta_a_jugador, SIZE_OF_FLOAT);      // Envía la carta al jugador
-                read(jugador_a_repartidor[0], &decision_jugador, SIZE_OF_INT);        // Lee la decisión del jugador
-                // wait();                                                          // Espera a que finalice uno de los jugadores
+                write(repartidor_a_jugador[1], &puntaje_jugador, SIZE_OF_FLOAT);      // Envía el puntaje al jugador
+
+                wait(NULL);
+
+                read(jugador_a_repartidor[0], &decision_jugador, SIZE_OF_INT);  // Lee la decisión del jugador
+                read(jugador_a_repartidor[0], &puntaje_jugador, SIZE_OF_FLOAT); // Lee el puntaje al jugador
+
+                if (decision_jugador == 2)
+                {
+                    // El jugador se planta
+                    printf("Soy el repartidor (ID: %d). El jugador se planto.\n", getpid());
+                    close(repartidor_a_jugador[0]);
+                    close(repartidor_a_jugador[1]);
+                    loop = false;
+                }
             }
             else if (tamanio_mazo(mazo) <= 0)
             {
                 printf("No hay cartas disponibles.\n");
-                loop = false;
-            }
-            else if (decision_jugador == 2)
-            {
-                printf("El jugador se planta.\n");
+                close(repartidor_a_jugador[0]);
+                close(repartidor_a_jugador[1]);
                 loop = false;
             }
             // VER SI LO DE ABAJO FUNCIONA
@@ -408,6 +472,7 @@ void iniciar_juego(int N, float mazo[4][10])
                 // No hay procesos hijos en ejecución
                 loop = false;
             }
+            printf("El puntaje del jugador es: %.2f\n", puntaje_jugador);
         }
 
         // Manejo de procesos Zombis
@@ -432,50 +497,62 @@ void iniciar_juego(int N, float mazo[4][10])
 void control_jugador(int *repartidor_a_jugador, int *jugador_a_repartidor, int id)
 {
     // Programa que controla al jugador
-    bool loop = true;
-    bool plantado = false;
-    int opcion_elegida;      // Almacena opción del menú de jugador
-    int puntaje_jugador = 0; // Inicializa el puntaje del jugador
-    float carta_dada = 0.0;  // Inicializa el valor de la carta otorgada al jugador
+    int opcion_elegida;    // Almacena opción del menú de jugador (1 = Nueva Carta, 2 = Se Planta)
+    float puntaje_jugador; // Inicializa el puntaje del jugador
+    float carta_dada;      // Inicializa el valor de la carta otorgada al jugador
 
-    while (loop)
+    // El jugador lee su puntaje
+    if (read(repartidor_a_jugador[0], &puntaje_jugador, SIZE_OF_FLOAT) < 0)
     {
-        int cartas_disponibles = 0; // Variable local de cartas disponibles
+        printf("ERROR. No se pudo leer del Pipe en proceso ID %d.\n", getpid());
+        return;
+    }
 
-        // Espera a que el padre escriba, luego procesa las cartas disponibles
-        read(repartidor_a_jugador[0], &carta_dada, SIZE_OF_FLOAT);
+    printf("\nSoy el jugador %d (ID: %d), mi puntaje actual es: %.2f", id, getpid(), puntaje_jugador); // Muestra al jugador participando en el juego
 
-        // Si quedan cartas disponibles, escribir la disponibilidad y luego tomar una
-        if (cartas_disponibles > 0)
+    // El jugador lee la carta otorgada
+    if (read(repartidor_a_jugador[0], &carta_dada, SIZE_OF_FLOAT) < 0)
+    {
+        printf("ERROR. No se pudo leer del Pipe en proceso ID %d.\n", getpid());
+        return;
+    }
+
+    printf("\nSoy el jugador %d (ID: %d), me dieron una carta con puntaje %.2f.\n", id, getpid(), carta_dada); // Muestra la carta dada al jugador
+
+    // Suma a su mano la carta
+    puntaje_jugador += carta_dada;
+
+    // El jugador muestra su puntaje por pantalla
+    printf("\nSoy el jugador %d (ID: %d), mi puntaje actual es: %.2f", id, getpid(), puntaje_jugador); // Muestra al jugador participando en el juego
+
+    // Decide, acorde a su puntaje, si intenta sacar una carta más o no
+    if (puntaje_jugador >= 7.5)
+    {
+        printf("\nSoy el jugador %d (ID: %d), acá me planto!\n", id, getpid()); // Muestra al jugador plantandose
+        opcion_elegida = 2;                                                     // Decide no sacar más cartas = SE PLANTA
+        write(jugador_a_repartidor[1], &opcion_elegida, SIZE_OF_INT);           // Escribe al repartidor con la opción elegida
+        write(jugador_a_repartidor[1], &puntaje_jugador, SIZE_OF_FLOAT);        // Escribe el puntaje del jugador al repartidor
+        close(jugador_a_repartidor[0]);                                         // Cierra la lectura
+        close(jugador_a_repartidor[1]);                                         // Cierra la escritura
+    }
+    else if (puntaje_jugador < 7.5)
+    {
+        opcion_elegida = rand() % 2 + 1; // Decide si saca o no, aleatoriamente
+        if (opcion_elegida == 2)
         {
-            opcion_elegida = imprimir_menu_jugador(cartas_disponibles); // Muestra el menu al jugador para que tome la decisión
-            if (opcion_elegida == 1)                                    // Retirar una carta
-            {
-                cartas_disponibles--; // Disminuye en 1 la cantidad de cartas disponibles
-            }
-            else if (opcion_elegida == 2) // El jugador se planta
-            {
-                plantado = true;
-                loop = false;
-            }
-
-            if (cartas_disponibles == 0)
-            {
-                printf("¡No hay cartas disponibles!\n");
-                loop = false;
-            }
-
-            // El jugador escribe al repartidor cuantas cartas quedan y detiene la ejecución
-            write(jugador_a_repartidor[1], &opcion_elegida, SIZE_OF_INT);
-            usleep(100); // Detener la ejecución por un intervalo de tiempo
+            printf("\nSoy el jugador %d (ID: %d), acá me planto!\n", id, getpid()); // Muestra al jugador plantandose
+            write(jugador_a_repartidor[1], &opcion_elegida, SIZE_OF_INT);           // Escribe al repartidor con la opción elegida
+            write(jugador_a_repartidor[1], &puntaje_jugador, SIZE_OF_FLOAT);        // Escribe el puntaje del jugador al repartidor
+            close(jugador_a_repartidor[0]);                                         // Cierra la lectura
+            close(jugador_a_repartidor[1]);                                         // Cierra la escritura
         }
-
-        // Si no quedan cartas, se detiene el bucle, y escribe nuevamente al repartidor
         else
         {
-            loop = false;
-            cartas_disponibles--;
-            write(jugador_a_repartidor[1], &opcion_elegida, SIZE_OF_INT);
+            printf("\nSoy el jugador %d (ID: %d), pido una nueva carta, por favor. \n", id, getpid()); // Muestra al jugador pidiendo carta
+            write(jugador_a_repartidor[1], &opcion_elegida, SIZE_OF_INT);                              // Escribe al repartidor con la opcion elegida
+            write(jugador_a_repartidor[1], &puntaje_jugador, SIZE_OF_FLOAT);                           // Escribe el puntaje del jugador al repartidor
+            close(jugador_a_repartidor[0]);                                                            // Cierra la lectura
         }
     }
+    close(jugador_a_repartidor[1]); // Cierra la escritura
 }
