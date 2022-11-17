@@ -36,7 +36,7 @@ int main(int argc, char *argv[])
     printf("¡ Bienvenido a Siete y Medio ! Esperamos que se divierta.\n\nElija la cantidad de jugadores: ");
     scanf("%d", &numJugadores);
 
-    printf("\nEl numero de jugadores es: %d.\n", numJugadores);
+    printf("\nEl numero de jugadores es: %d.\n\n", numJugadores);
 
     float mazo[4][10];     // Definición del mazo
     incializar_mazo(mazo); // Inicialización del mazo
@@ -49,7 +49,7 @@ int main(int argc, char *argv[])
     // Los file descriptors de los pipes se asignarán de a pares para las conexiones con cada uno de los jugadores (ida y vuelta)
     int rep_a_jug[numJugadores][2]; // Pipe para comunicación de repartidor a jugador
     int i;
-    for (i = 0; i < numJugadores + 1; i++)
+    for (i = 0; i < numJugadores; i++)
     {
         if (pipe(rep_a_jug[i]) < 0)
         {
@@ -58,8 +58,18 @@ int main(int argc, char *argv[])
         }
     }
 
+    int quiero_cartas[numJugadores][2]; // Pipe para comunicación de repartidor a jugador
+    for (i = 0; i < numJugadores; i++)
+    {
+        if (pipe(quiero_cartas[i]) < 0)
+        {
+            printf("\nProblema abriendos los pipes de Repartidor a Jugador.\n");
+            return 1;
+        }
+    }
+
     int jug_a_rep[numJugadores][2]; // Pipe para la comunicación de jugador a repartidor
-    for (i = 0; i < numJugadores + 1; i++)
+    for (i = 0; i < numJugadores; i++)
     {
         if (pipe(jug_a_rep[i]) < 0)
         {
@@ -82,39 +92,54 @@ int main(int argc, char *argv[])
         {
             // Proceso hijo
             printf("\nEl Jugador %d (ID: %d) ha entrado al juego.\n", i + 1, getpid());
-            int j;
-            // Cierre de los pipes que no serán usados por el proceso
-            for (j = 0; j < numJugadores + 1; j++)
-            {
-                if (i != j)
-                {
-                    close(rep_a_jug[j][0]);
-                    close(rep_a_jug[j][1]);
-                    close(jug_a_rep[j][0]);
-                    close(jug_a_rep[j][1]);
-                }
-            }
 
             // Proceso perteneciente al hijo
-            float puntajeJ = 0.0; // Inicializa el puntaje del jugador en 0.0
-            float puntajeC;       // Inicializa el puntaje de la carta entregada por el repartidor
-            printf("\nSoy el Jugador %d (ID: %d), mi puntaje actual es: %.2f.\n", i + 1, getpid(), puntajeJ);
+            float puntajeJ = 0.0;  // Inicializa el puntaje del jugador en 0.0
+            float puntajeC;        // Inicializa el puntaje de la carta entregada por el repartidor
+            int decisionCarta = 0; // Decisión por una nueva carta
+            bool loop = true;      // Controla el loop de pedido de cartas
+            // printf("\nSoy el Jugador %d (ID: %d), mi puntaje actual es: %.2f.\n", i + 1, getpid(), puntajeJ);
 
-            wait(2);
-            // Lee el puntaje de la carta enviada desde el repartidor
-            if (read(rep_a_jug[i][0], &puntajeC, SIZE_OF_FLOAT) == -1)
+            while (loop)
             {
-                printf("\nError en la lectura del pipe.\n");
-                return 4;
+                // Lee el puntaje de la carta enviada desde el repartidor
+                if (read(rep_a_jug[i][0], &puntajeC, SIZE_OF_FLOAT) == -1)
+                {
+                    printf("\nError en la lectura del pipe.\n");
+                    return 4;
+                }
+
+                // Mensaje del Jugador para mostrar qué carta recibió
+                printf("\nSoy el Jugador %d (ID: %d), recibi una carta de puntaje: %.2f.\n", i + 1, getpid(), puntajeC);
+
+                // Cálculo del nuevo puntaje del jugador
+                puntajeJ += puntajeC;
+
+                printf("\nSoy el Jugador %d (ID: %d), mi puntaje actual es: %.2f.\n", i + 1, getpid(), puntajeJ);
+
+                // Decide si quiere una nueva carta o no
+                decisionCarta = rand() % 2; // 0 = sin nueva carta ; 1 = pide nueva carta
+                if (decisionCarta == 1)
+                {
+                    printf("\nSoy el Jugador %d (ID: %d), pido una nueva carta.\n", i + 1, getpid());
+                    if (write(quiero_cartas[i][1], &decisionCarta, SIZE_OF_INT) == -1)
+                    {
+                        printf("\nError en la escritura del pipe.\n");
+                        return 5;
+                    }
+                    sleep(1);
+                }
+                else if (decisionCarta == 0)
+                {
+                    printf("\nSoy el Jugador %d (ID: %d), me planto.\n", i + 1, getpid());
+                    if (write(quiero_cartas[i][1], &decisionCarta, SIZE_OF_INT) == -1)
+                    {
+                        printf("\nError en la escritura del pipe.\n");
+                        return 5;
+                    }
+                    loop = false;
+                }
             }
-
-            // Mensaje del Jugador para mostrar qué carta recibió
-            printf("\nSoy el Jugador %d (ID: %d), recibi una carta de puntaje: %.2f.\n", i + 1, getpid(), puntajeC);
-
-            // Cálculo del nuevo puntaje del jugador
-            puntajeJ += puntajeC;
-
-            printf("\nSoy el Jugador %d (ID: %d), mi puntaje actual es: %.2f.\n", i + 1, getpid(), puntajeJ);
 
             // Envía el puntaje al repartidor
             if (write(jug_a_rep[i][1], &puntajeJ, SIZE_OF_FLOAT) == -1)
@@ -126,48 +151,68 @@ int main(int argc, char *argv[])
             // Mensaje de salida del jugador
             printf("\nEl Jugador %d (ID: %d) ha finalizado su juego.\n", i + 1, getpid());
             // Cierre de los pipes abiertos
-            close(rep_a_jug[i][0]);
-            close(jug_a_rep[i][1]);
+            // close(rep_a_jug[i][0]);
+            // close(jug_a_rep[i][1]);
+            // close(quiero_cartas[i][0]);
+            // close(quiero_cartas[i][1]);
             return 0; // Finaliza la creación de procesos hijos (jugadores)
         }
     }
 
     // Proceso padre
 
+    sleep(2);
+
     printf("\nEl Repartidor (ID: %d) ha entrado al juego.\n", getpid());
 
     float puntajes[numJugadores]; // Arreglo para almacenar los puntajes de los jugadores
     float puntosCarta = 0.0;      // Inicializa los puntos de la carta a enviar
     float puntajeJugador = 0.0;   // Inicializa el puntaje del jugador
-
+    int quiereCarta;              // Registra la info del jugador pidiendo cartas
+    bool loopR;
     // Envía la carta al proceso
-    for (int i = 0; numJugadores - 1; i++)
+    for (int i = 0; i < numJugadores; i++)
     {
-        // Saca una carta del mazo
-        puntosCarta = saca_carta(mazo);
-
-        // Envía la carta por el pipe
-        if (write(rep_a_jug[i][1], &puntosCarta, SIZE_OF_FLOAT) == -1)
+        loopR = true;
+        while (loopR)
         {
-            printf("\nError en la escritura del pipe.\n");
-            return 6;
+            // Saca una carta del mazo
+            puntosCarta = saca_carta(mazo);
+
+            // Envía la carta por el pipe
+            if (write(rep_a_jug[i][1], &puntosCarta, SIZE_OF_FLOAT) == -1)
+            {
+                printf("\nError en la escritura del pipe.\n");
+                return 6;
+            }
+
+            if (read(quiero_cartas[i][0], &quiereCarta, SIZE_OF_INT) == -1)
+            {
+                printf("\nError en la lectura del pipe.\n");
+                return 7;
+            }
+
+            // Lee el nuevo puntaje del jugador
+            if (read(jug_a_rep[i][0], &puntajeJugador, SIZE_OF_FLOAT) == -1)
+            {
+                printf("\nError en la lectura del pipe.\n");
+                return 7;
+            }
+
+            if (quiereCarta == 1)
+            {
+                printf("\nJugador %d pide una nueva carta.\n", i + 1);
+            }
+            else if (quiereCarta == 0)
+            {
+                printf("\nJugador %d plantado, no se envian mas cartas.\n", i + 1);
+                loopR = false;
+                waitpid(pids[i], NULL, 0);
+            }
+
+            // Agrega los puntajes al array de puntajes
+            puntajes[i] += puntajeJugador;
         }
-
-        printf("\nSoy el repartidor. Acabo de enviar una carta de puntaje %.2f al Jugador %d.\n", puntosCarta, i + 1);
-
-        waitpid(pids[i], NULL, 0);
-
-        // Lee el nuevo puntaje del jugador
-        if (read(jug_a_rep[i][0], &puntajeJugador, SIZE_OF_FLOAT) == -1)
-        {
-            printf("\nError en la lectura del pipe.\n");
-            return 7;
-        }
-
-        printf("\nSoy el repartidor. Acabo de leer el puntaje del Jugador %d. Puntaje: %.2f.\n", i + 1, puntajeJugador);
-
-        // Agrega los puntajes al array de puntajes
-        puntajes[i] = puntajeJugador;
     }
 
     // Espera que todos los jugadores finalicen sus turnos
@@ -176,11 +221,30 @@ int main(int argc, char *argv[])
         wait(NULL);
     }
 
-    // Se muestran los procesos
+    // Cierre de todos los FD
+    for (int i = 0; i < numJugadores; i++)
+    {
+        close(rep_a_jug[i][0]);
+        close(rep_a_jug[i][1]);
+        close(jug_a_rep[i][0]);
+        close(jug_a_rep[i][1]);
+        close(quiero_cartas[i][0]);
+        close(quiero_cartas[i][1]);
+    }
+
+    // Se muestran los puntos de los jugadores
+    printf("\nJUEGO TERMINADO\nTabla de Resultados:\n");
+    int ganador = 0;
     for (i = 0; i < numJugadores; i++)
     {
-        printf("\nProceso [%d] - Jugador [%d]: %d - Puntaje Final: %.2f\n", i, i + 1, pids[i], puntajes[i]);
+        printf("Proceso [%d] - Jugador [%d]: %d - Puntaje Final: %.2f\n", i, i + 1, pids[i], puntajes[i]);
+        if (puntajes[i] > ganador)
+        {
+            ganador = i;
+        }
     }
+    printf("\n** El ganador es el Jugador %d, con un puntaje de %.2f. ¡ FELICITACIONES ! **\n", ganador, puntajes[ganador]);
+    printf("\nMuchas gracias por jugar, esperamos que se hayan divertido!\n");
 
     return 0;
 }
@@ -316,7 +380,7 @@ float saca_carta(float mazo[4][10])
         break;
     }
 
-    printf("\nCarta Extraída:\nPalo: %s - Carta: %d - Valor: %.1f\n\n", palo, posicion_aleatoria, carta); // Muestra la carta elegida
+    printf("\nCarta Extraída:\nPalo: %s - Carta: %d - Valor: %.1f\n", palo, posicion_aleatoria, carta); // Muestra la carta elegida
     // printf("Estado del mazo: \n");
     // imprimir_mazo(mazo); // Imprime el mazo
     // printf("\n\n");
